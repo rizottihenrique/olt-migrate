@@ -58,3 +58,27 @@ func TestFiberhome6000Generator(t *testing.T) {
 		t.Errorf("Falhou ao gerar vlan bridge AN6000: %s", output)
 	}
 }
+
+func TestFiberhome6000Generator_UserCase(t *testing.T) {
+	onus := []models.ONU{
+		{
+			SlotID:    1,
+			PortID:    8,
+			OnuID:     29,
+			PPPoEUser: "93620.linx.2",
+			PPPoEPass: "3339921c",
+			WiFiSSID:  "Ellos",
+			WiFiPass:  "20112024",
+		},
+	}
+	gen := &Fiberhome6000Generator{}
+	output := gen.Generate(onus)
+	t.Logf("Output gerado AN6000:\n%s", output)
+
+	if !strings.Contains(output, "onu wifi connection 29 serv-no 1 index 1 ssid enable Ellos hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey 20112024") {
+		t.Errorf("Comando wifi connection serv-no 1 gerado incorretamente. Output:\n%s", output)
+	}
+	if !strings.Contains(output, "onu wifi connection 29 serv-no 5 index 1 ssid enable Ellos_5G hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey 20112024") {
+		t.Errorf("Comando wifi connection serv-no 5 gerado incorretamente. Output:\n%s", output)
+	}
+}

@@ -29,10 +29,18 @@ var (
 	}
 )
 
-// DecryptPassword descriptografa a senha obfuscada das OLTs Fiberhome
+// DecryptPassword descriptografa a senha obfuscada das OLTs Fiberhome via fórmula reflexiva (158 - ch)
 func DecryptPassword(encrypted string) string {
+	encrypted = strings.TrimPrefix(encrypted, "key:")
 	var builder strings.Builder
 	for _, ch := range encrypted {
+		if ch >= 32 && ch <= 126 {
+			val := 158 - ch
+			if val >= 0 && val <= 255 {
+				builder.WriteRune(val)
+				continue
+			}
+		}
 		if plain, ok := decryptMap[ch]; ok {
 			builder.WriteRune(plain)
 		} else {
@@ -42,10 +50,17 @@ func DecryptPassword(encrypted string) string {
 	return builder.String()
 }
 
-// EncryptPassword criptografa uma senha em texto plano para o formato obfuscado Fiberhome
+// EncryptPassword criptografa uma senha em texto plano para o formato obfuscado Fiberhome via fórmula reflexiva (158 - ch)
 func EncryptPassword(plaintext string) string {
 	var builder strings.Builder
 	for _, ch := range plaintext {
+		if ch >= 32 && ch <= 126 {
+			val := 158 - ch
+			if val >= 0 && val <= 255 {
+				builder.WriteRune(val)
+				continue
+			}
+		}
 		if enc, ok := encryptMap[ch]; ok {
 			builder.WriteRune(enc)
 		} else {

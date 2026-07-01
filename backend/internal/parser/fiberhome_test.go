@@ -92,3 +92,75 @@ onu wifi connection 1 serv-no 1 index 1 ssid enable Maria Wi Fi hide disable aut
 		t.Errorf("WiFi incorreto: %s / %s", onu1.WiFiSSID, onu1.WiFiPass)
 	}
 }
+
+func TestParseFiberhome_EmilioCase(t *testing.T) {
+	config := `
+set autho sl 1 p 1 ty 5506-04-FA o 6 phy FHTT9a980b98 pas null 
+set wancfg sl 1 1 6 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag tvlan dis 65535 65535 dsp pppoe pro dis 118985.emilio.0 key:+906=mlk null auto entries 6 fe1
+set wifi_serv_wlan slot 1 pon 1 onu 6 serv_no 1 index 1 ssid enable Redenicnet hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey saocarlos interval 0
+set wifi_serv_wlan slot 1 pon 1 onu 6 serv_no 2 index 1 ssid enable Redenicnet_5G hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey saocarlos interval 0
+`
+	reader := strings.NewReader(config)
+	parserInstance := &FiberhomeParser{}
+	onus, err := parserInstance.Parse(reader)
+	if err != nil {
+		t.Fatalf("Erro ao parsear: %v", err)
+	}
+	if len(onus) != 1 {
+		t.Fatalf("Esperava 1 ONU, obteve %d", len(onus))
+	}
+	if onus[0].PPPoEUser != "118985.emilio.0" {
+		t.Errorf("PPPoEUser incorreto: %s", onus[0].PPPoEUser)
+	}
+	if onus[0].WiFiSSID != "Redenicnet" || onus[0].WiFiPass != "saocarlos" {
+		t.Errorf("WiFi incorreto, esperado Redenicnet/saocarlos, obteve: %s / %s", onus[0].WiFiSSID, onus[0].WiFiPass)
+	}
+}
+
+func TestParseFiberhome_PositionalAndOutOfOrderWiFi(t *testing.T) {
+	// Teste com sintaxe posicional sl 1 1 6 e wifi vindo antes de autho (ou sem palavras-chave explícitas)
+	config := `
+set wifi_serv_wlan sl 1 1 6 serv_no 1 index 1 ssid enable Positional_WiFi hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey segredo123 interval 0
+set autho sl 1 p 1 ty 5506-04-FA o 6 phy FHTT9a980b98 pas null
+set wancfg sl 1 1 6 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag tvlan dis 65535 65535 dsp pppoe pro dis positional.user key:+906=mlk null auto entries 6 fe1
+`
+	reader := strings.NewReader(config)
+	parserInstance := &FiberhomeParser{}
+	onus, err := parserInstance.Parse(reader)
+	if err != nil {
+		t.Fatalf("Erro ao parsear: %v", err)
+	}
+	if len(onus) != 1 {
+		t.Fatalf("Esperava 1 ONU, obteve %d", len(onus))
+	}
+	if onus[0].WiFiSSID != "Positional_WiFi" || onus[0].WiFiPass != "segredo123" {
+		t.Errorf("WiFi incorreto, esperado Positional_WiFi/segredo123, obteve: %s / %s", onus[0].WiFiSSID, onus[0].WiFiPass)
+	}
+}
+
+func TestParseFiberhome_UserCase(t *testing.T) {
+	config := `
+set wancfg sl 1 8 29 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag tvlan dis 65535 65535 dsp pppoe pro dis 93620.linx.2 key:kkkeelm; null auto entries 6 fe1 fe2 fe3 fe4 ssid1 ssid5 
+
+set wifi_serv_wlan slot 1 pon 8 onu 29 serv_no 1 index 1 ssid enable Ellos hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey 20112024 interval 86400 radius_serv ipv4 0.0.0.0 port 0 pswd null wep_length 40bit key_index 1 wep_key 12345 12345 12345 12345 wapi_serv_addr 0.0.0.0 0 wifi_connect_num 32 
+
+set wifi_serv_cfg slot 1 pon 8 onu 29 serv_no 1 wifi disable district etsi channel 0 standard 802.11b txpower 0 frequency 2.4ghz freq_bandwidth 20mhz/40mhz
+set wifi_serv_wlan slot 1 pon 8 onu 29 serv_no 2 index 1 ssid enable Ellos_5G hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey 20112024 interval 86400 radius_serv ipv4 0.0.0.0 port 0 pswd null wep_length 40bit key_index 1 wep_key 12345 12345 12345 12345 wapi_serv_addr 0.0.0.0 0 wifi_connect_num 32
+`
+	reader := strings.NewReader(config)
+	parserInstance := &FiberhomeParser{}
+	onus, err := parserInstance.Parse(reader)
+	if err != nil {
+		t.Fatalf("Erro ao parsear: %v", err)
+	}
+	if len(onus) != 1 {
+		t.Fatalf("Esperava 1 ONU, obteve %d", len(onus))
+	}
+	t.Logf("ONU parseada: %+v", onus[0])
+	if onus[0].SlotID != 1 || onus[0].PortID != 8 || onus[0].OnuID != 29 {
+		t.Errorf("Identificadores incorretos: slot=%d, port=%d, onuID=%d", onus[0].SlotID, onus[0].PortID, onus[0].OnuID)
+	}
+	if onus[0].WiFiSSID != "Ellos" || onus[0].WiFiPass != "20112024" {
+		t.Errorf("WiFi incorreto, esperado Ellos/20112024, obteve: '%s' / '%s'", onus[0].WiFiSSID, onus[0].WiFiPass)
+	}
+}

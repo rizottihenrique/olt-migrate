@@ -70,11 +70,34 @@ func migrateHandler(w http.ResponseWriter, r *http.Request) {
 	generator := core.GetGenerator(destVendor)
 	commands := generator.Generate(onus)
 
+	// Agrupa ONUs por PON para gerar comandos modulares por porta (cópia rápida na UI)
+	ponCommands := make(map[string]string)
+	ponMap := make(map[string][]models.ONU)
+	onuCommands := make(map[string]string)
+
+	for _, onu := range onus {
+		ponKey := fmt.Sprintf("PON %d/%d", onu.SlotID, onu.PortID)
+		ponMap[ponKey] = append(ponMap[ponKey], onu)
+
+		clientName := onu.PPPoEUser
+		if clientName == "" {
+			clientName = fmt.Sprintf("Bridge (SN: %s)", onu.SerialNumber)
+		}
+		onuKey := fmt.Sprintf("%d/%d/%d - %s", onu.SlotID, onu.PortID, onu.OnuID, clientName)
+		onuCommands[onuKey] = generator.Generate([]models.ONU{onu})
+	}
+	for key, ponONUs := range ponMap {
+		ponCommands[key] = generator.Generate(ponONUs)
+	}
+
 	// Retorna resultado JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"totalONUsFound": len(onus),
 		"commands":       commands,
+		"ponCommands":    ponCommands,
+		"onuCommands":    onuCommands,
+		"onus":           onus,
 	})
 }
 

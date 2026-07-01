@@ -8,8 +8,29 @@ export default function Home() {
   const [destVendor, setDestVendor] = useState("Nokia");
   const [mappings, setMappings] = useState([{ sourceSlot: 1, sourcePon: 1, destSlot: 1, destPon: 1 }]);
   const [commands, setCommands] = useState("");
+  const [ponCommands, setPonCommands] = useState<Record<string, string>>({});
+  const [onuCommands, setOnuCommands] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<"all" | "clean" | "pon" | "onu">("all");
+  const [selectedPon, setSelectedPon] = useState<string>("");
+  const [searchOnu, setSearchOnu] = useState<string>("");
+  const [hideMarkers, setHideMarkers] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<{ totalONUsFound: number } | null>(null);
+
+  const getCleanScript = (text: string) => {
+    if (!text) return "";
+    return text
+      .split("\n")
+      .filter((line) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("! ONU") || trimmed.startsWith("! ONT") || trimmed.startsWith("! --- Provisionamento da ONU") || trimmed.startsWith("! --- ONU")) {
+          return false;
+        }
+        return true;
+      })
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n");
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -53,8 +74,13 @@ export default function Home() {
       }
 
       const data = await res.json();
-      setCommands(data.commands);
+      setCommands(data.commands || "");
+      setPonCommands(data.ponCommands || {});
+      setOnuCommands(data.onuCommands || {});
       setStats({ totalONUsFound: data.totalONUsFound });
+      setViewMode("all");
+      const pons = Object.keys(data.ponCommands || {});
+      if (pons.length > 0) setSelectedPon(pons[0]);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -210,7 +236,7 @@ export default function Home() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-8rem)]">
           
           <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center shrink-0">
-            <h2 className="text-sm font-semibold text-gray-800">Resultado (Comandos Nokia)</h2>
+            <h2 className="text-sm font-semibold text-gray-800">Resultado ({destVendor})</h2>
             <div className="flex items-center gap-4">
               {stats && (
                 <span className="text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
@@ -220,37 +246,175 @@ export default function Home() {
               {commands && (
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => {navigator.clipboard.writeText(commands); alert("Copiado!");}}
-                    className="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5 px-2.5 py-1 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                    Copiar
-                  </button>
-                  <button 
                     onClick={handleDownload}
                     className="text-xs font-medium text-blue-700 hover:text-blue-900 flex items-center gap-1.5 px-2.5 py-1 border border-blue-200 bg-blue-50 rounded hover:bg-blue-100 transition-colors shadow-sm"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Baixar .txt
+                    Baixar Arquivo (.txt)
                   </button>
                 </div>
               )}
             </div>
           </div>
+
+          {commands && (
+            <div className="bg-gray-100/70 border-b border-gray-200 px-4 py-2 flex items-center justify-between gap-2 text-xs">
+              <div className="flex gap-1 bg-gray-200/60 p-0.5 rounded-lg flex-wrap">
+                <button
+                  onClick={() => setViewMode("all")}
+                  className={`px-3 py-1 rounded-md font-medium transition-all ${viewMode === "all" ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  📄 Script Completo
+                </button>
+                <button
+                  onClick={() => setViewMode("clean")}
+                  className={`px-3 py-1 rounded-md font-medium transition-all ${viewMode === "clean" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  🧹 Script Limpo (Sem Marcações)
+                </button>
+                <button
+                  onClick={() => setViewMode("pon")}
+                  className={`px-3 py-1 rounded-md font-medium transition-all ${viewMode === "pon" ? "bg-white text-blue-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  ⚡ Cópia Rápida por PON
+                </button>
+                <button
+                  onClick={() => setViewMode("onu")}
+                  className={`px-3 py-1 rounded-md font-medium transition-all ${viewMode === "onu" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                >
+                  🔍 Cliente Individual
+                </button>
+              </div>
+            </div>
+          )}
           
-          <div className="flex-1 bg-white relative p-1 overflow-hidden">
-            {commands ? (
-              <textarea 
-                readOnly 
-                value={commands}
-                className="w-full h-full bg-transparent text-gray-800 font-mono text-[13px] p-5 focus:outline-none resize-none leading-relaxed"
-                spellCheck="false"
-              ></textarea>
-            ) : (
+          <div className="flex-1 bg-white relative p-0 overflow-hidden">
+            {!commands ? (
               <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 p-8 text-center bg-gray-50/30">
                 <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 <p className="text-sm font-medium">Os scripts de configuração aparecerão aqui.</p>
                 <p className="text-xs mt-1 text-gray-400">Faça o upload do backup e execute a conversão.</p>
+              </div>
+            ) : viewMode === "all" ? (
+              <div className="w-full h-full flex flex-col">
+                <div className="p-2.5 bg-gray-50 border-b border-gray-100 flex justify-between items-center px-4">
+                  <span className="text-xs text-gray-500 font-medium">Exibindo o script de migração completo com todas as portas PON:</span>
+                  <button 
+                    onClick={() => {navigator.clipboard.writeText(commands); alert("Script completo copiado!");}}
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold rounded shadow-sm flex items-center gap-1.5 transition-all"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Copiar Script Completo
+                  </button>
+                </div>
+                <textarea 
+                  readOnly 
+                  value={commands}
+                  className="w-full flex-1 bg-transparent text-gray-800 font-mono text-[13px] p-5 focus:outline-none resize-none leading-relaxed"
+                  spellCheck="false"
+                ></textarea>
+              </div>
+            ) : viewMode === "clean" ? (
+              <div className="w-full h-full flex flex-col">
+                <div className="p-2.5 bg-emerald-50/50 border-b border-emerald-100 flex justify-between items-center px-4">
+                  <span className="text-xs text-emerald-900 font-medium flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                    Exibindo o script limpo (sem as marcações por ONU/ONT para cópia contínua na OLT):
+                  </span>
+                  <button 
+                    onClick={() => {navigator.clipboard.writeText(getCleanScript(commands)); alert("Script limpo copiado!");}}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded shadow flex items-center gap-1.5 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Copiar Script Limpo
+                  </button>
+                </div>
+                <textarea 
+                  readOnly 
+                  value={getCleanScript(commands)}
+                  className="w-full flex-1 bg-transparent text-gray-800 font-mono text-[13px] p-5 focus:outline-none resize-none leading-relaxed"
+                  spellCheck="false"
+                ></textarea>
+              </div>
+            ) : viewMode === "pon" ? (
+              <div className="w-full h-full flex flex-col">
+                <div className="p-3 border-b border-gray-100 bg-blue-50/30 flex flex-wrap gap-2 items-center px-4">
+                  <span className="text-xs font-bold text-blue-900 mr-2">Selecione a PON:</span>
+                  {Object.keys(ponCommands).map((pon) => (
+                    <button
+                      key={pon}
+                      onClick={() => setSelectedPon(pon)}
+                      className={`px-3 py-1 text-xs rounded-lg font-semibold transition-all ${selectedPon === pon ? "bg-blue-600 text-white shadow" : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"}`}
+                    >
+                      {pon}
+                    </button>
+                  ))}
+                </div>
+                <div className="p-2.5 bg-gray-50 border-b border-gray-100 flex justify-between items-center px-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-600 font-medium">Bloco de comandos autônomo da PON:</span>
+                    <label className="flex items-center gap-1.5 text-xs text-gray-700 font-semibold cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-2xs hover:bg-gray-50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={hideMarkers}
+                        onChange={(e) => setHideMarkers(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                      />
+                      Sem marcações ONU/ONT
+                    </label>
+                  </div>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(hideMarkers ? getCleanScript(ponCommands[selectedPon] || "") : (ponCommands[selectedPon] || "")); alert(`Comandos da ${selectedPon} copiados!`); }}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow flex items-center gap-1.5 transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    Copiar Bloco da {selectedPon}
+                  </button>
+                </div>
+                <textarea
+                  readOnly
+                  value={hideMarkers ? getCleanScript(ponCommands[selectedPon] || "") : (ponCommands[selectedPon] || "")}
+                  className="w-full flex-1 bg-transparent text-gray-800 font-mono text-[13px] p-5 focus:outline-none resize-none leading-relaxed"
+                  spellCheck="false"
+                ></textarea>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col">
+                <div className="p-3 border-b border-gray-100 bg-purple-50/30 flex items-center gap-3 px-4">
+                  <span className="text-xs font-bold text-purple-900 shrink-0">Buscar Cliente:</span>
+                  <input
+                    type="text"
+                    placeholder="Digite nome, serial, slot ou ID (ex: maria, FHTT, 1/2/3)..."
+                    value={searchOnu}
+                    onChange={(e) => setSearchOnu(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs border border-purple-200 rounded-lg focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none bg-white"
+                  />
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/50">
+                  {Object.keys(onuCommands)
+                    .filter((k) => k.toLowerCase().includes(searchOnu.toLowerCase()))
+                    .map((onuKey) => (
+                      <div key={onuKey} className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm flex flex-col gap-2 hover:border-purple-200 transition-colors">
+                        <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                          <span className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                            {onuKey}
+                          </span>
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(onuCommands[onuKey] || ""); alert(`Comandos copiados: ${onuKey}`); }}
+                            className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            Copiar SÓ este Cliente
+                          </button>
+                        </div>
+                        <pre className="text-[11px] font-mono text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-150 overflow-x-auto whitespace-pre-wrap max-h-40 overflow-y-auto">{onuCommands[onuKey]}</pre>
+                      </div>
+                    ))}
+                  {Object.keys(onuCommands).filter((k) => k.toLowerCase().includes(searchOnu.toLowerCase())).length === 0 && (
+                    <div className="text-center py-8 text-gray-400 text-xs">Nenhum cliente encontrado para a busca "{searchOnu}".</div>
+                  )}
+                </div>
               </div>
             )}
           </div>
