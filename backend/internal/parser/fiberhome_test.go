@@ -12,7 +12,8 @@ func TestParseFiberhome5000(t *testing.T) {
 set autho sl 1 p 1 ty 5506-04-FA o 2 phy FHTT9a980b98 pas null 
 set autho sl 1 p 2 ty 5506-01-A1 o 10 phy FHTT92370718 pas null
 
-set wancfg sl 1 1 2 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag tvlan dis 65535 65535 dsp pppoe pro dis cliente.pppoe key:senha123 null auto entries 6 fe1
+set wancfg sl 1 1 2 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag tvlan dis 65535 65535 dsp pppoe pro dis cliente.pppoe key:+906=mlk null auto entries 6 fe1
+set wifi_serv_wlan slot 1 pon 1 onu 2 serv_no 1 index 1 ssid enable 2Alto do Castelo hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey @ltocastelo2 interval 0
 `
 	reader := strings.NewReader(config)
 	parserInstance := &FiberhomeParser{}
@@ -44,6 +45,9 @@ set wancfg sl 1 1 2 ind 1 mode tr069_in ty r 81 65535 nat en qos dis vlanm tag t
 	if onu2.PPPoEUser != "cliente.pppoe" || onu2.PPPoEPass != "senha123" {
 		t.Errorf("PPPoE incorreto: %s / %s", onu2.PPPoEUser, onu2.PPPoEPass)
 	}
+	if onu2.WiFiSSID != "2Alto do Castelo" || onu2.WiFiPass != "@ltocastelo2" {
+		t.Errorf("WiFi incorreto: %s / %s", onu2.WiFiSSID, onu2.WiFiPass)
+	}
 }
 
 func TestParseFiberhome6000(t *testing.T) {
@@ -52,7 +56,8 @@ authorize 1/1/1 1 type 5506-04-FA  phy-id FHTT9df6baa0 password null
 authorize 1/2/3 15 type HG6145E  phy-id FHTT9c0a4860 password null 
 
 interface pon 1/1/1 
-onu wan-cfg 1 ind 1 mode tr069-in ty r 189 0 nat en qos dis vlanm tag tvlan dis 0 0 dsp pppoe pro dis maria.silva key:123456 null pay upnp_switch
+onu wan-cfg 1 ind 1 mode tr069-in ty r 189 0 nat en qos dis vlanm tag tvlan dis 0 0 dsp pppoe pro dis maria.silva key:mlkjih null pay upnp_switch
+onu wifi connection 1 serv-no 1 index 1 ssid enable Maria Wi Fi hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey senha654 interval 0
 `
 	reader := strings.NewReader(config)
 	parserInstance := &FiberhomeParser{}
@@ -82,5 +87,8 @@ onu wan-cfg 1 ind 1 mode tr069-in ty r 189 0 nat en qos dis vlanm tag tvlan dis 
 	}
 	if onu1.PPPoEUser != "maria.silva" || onu1.PPPoEPass != "123456" {
 		t.Errorf("PPPoE incorreto: %s / %s", onu1.PPPoEUser, onu1.PPPoEPass)
+	}
+	if onu1.WiFiSSID != "Maria Wi Fi" || onu1.WiFiPass != "senha654" {
+		t.Errorf("WiFi incorreto: %s / %s", onu1.WiFiSSID, onu1.WiFiPass)
 	}
 }

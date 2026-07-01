@@ -8,17 +8,20 @@ import (
 	"strconv"
 	"strings"
 
+	"olt-migrate-backend/internal/crypto"
 	"olt-migrate-backend/internal/models"
 )
 
 // Regex para Fiberhome 5000
 var re5000ONU = regexp.MustCompile(`set autho sl (\d+) p (\d+) ty (\S+) o (\d+) phy (\S+)`)
 var re5000WanCfg = regexp.MustCompile(`set wancfg sl (\d+) (\d+) (\d+).*?dsp pppoe.*?dis (\S+)\s+key:(\S+)`)
+var re5000WiFi = regexp.MustCompile(`set wifi_serv_wlan slot (\d+) pon (\d+) onu (\d+) serv_no 1 index 1 ssid enable (.+?) hide (?:enable|disable).*?wpakey (\S+)`)
 
 // Regex para Fiberhome 6000
 var re6000ONU = regexp.MustCompile(`authorize \d+/(\d+)/(\d+) (\d+) type (\S+)\s+phy-id (\S+)`)
 var re6000Interface = regexp.MustCompile(`^interface pon \d+/(\d+)/(\d+)`)
 var re6000WanCfg = regexp.MustCompile(`^onu wan-cfg (\d+).*?dsp pppoe.*?dis (\S+)\s+key:(\S+)`)
+var re6000WiFi = regexp.MustCompile(`^onu wifi connection (\d+) serv-no 1 index 1 ssid enable (.+?) hide (?:enable|disable).*?wpakey (\S+)`)
 
 func makeKey(slot, port, onuID int) string {
 	return fmt.Sprintf("%d-%d-%d", slot, port, onuID)
@@ -70,7 +73,22 @@ func (p *FiberhomeParser) Parse(reader io.Reader) ([]models.ONU, error) {
 			key := makeKey(slot, port, onuID)
 			if onu, exists := onuMap[key]; exists {
 				onu.PPPoEUser = user
-				onu.PPPoEPass = pass
+				onu.PPPoEPass = crypto.DecryptPassword(pass)
+			}
+			continue
+		}
+
+		if matches := re5000WiFi.FindStringSubmatch(line); matches != nil {
+			slot, _ := strconv.Atoi(matches[1])
+			port, _ := strconv.Atoi(matches[2])
+			onuID, _ := strconv.Atoi(matches[3])
+			ssid := matches[4]
+			pass := matches[5]
+
+			key := makeKey(slot, port, onuID)
+			if onu, exists := onuMap[key]; exists {
+				onu.WiFiSSID = strings.TrimSpace(ssid)
+				onu.WiFiPass = pass
 			}
 			continue
 		}
@@ -110,7 +128,20 @@ func (p *FiberhomeParser) Parse(reader io.Reader) ([]models.ONU, error) {
 				key := makeKey(currentSlot, currentPort, onuID)
 				if onu, exists := onuMap[key]; exists {
 					onu.PPPoEUser = user
-					onu.PPPoEPass = pass
+					onu.PPPoEPass = crypto.DecryptPassword(pass)
+				}
+				continue
+			}
+
+			if matches := re6000WiFi.FindStringSubmatch(line); matches != nil {
+				onuID, _ := strconv.Atoi(matches[1])
+				ssid := matches[2]
+				pass := matches[3]
+
+				key := makeKey(currentSlot, currentPort, onuID)
+				if onu, exists := onuMap[key]; exists {
+					onu.WiFiSSID = strings.TrimSpace(ssid)
+					onu.WiFiPass = pass
 				}
 				continue
 			}

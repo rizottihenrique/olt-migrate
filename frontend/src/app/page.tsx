@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
-  const [sourceVendor, setSourceVendor] = useState("Fiberhome");
+  const [sourceVendor, setSourceVendor] = useState("Fiberhome AN5000");
   const [destVendor, setDestVendor] = useState("Nokia");
   const [mappings, setMappings] = useState([{ sourceSlot: 1, sourcePon: 1, destSlot: 1, destPon: 1 }]);
   const [commands, setCommands] = useState("");
@@ -90,7 +90,8 @@ export default function Home() {
             <div className="flex-1">
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Origem (De)</label>
               <select value={sourceVendor} onChange={(e) => setSourceVendor(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
-                <option value="Fiberhome">Fiberhome</option>
+                <option value="Fiberhome AN5000">Fiberhome AN5000</option>
+                <option value="Fiberhome AN6000">Fiberhome AN6000</option>
                 <option value="ZTE">ZTE (Em breve)</option>
                 <option value="Huawei">Huawei (Em breve)</option>
               </select>
@@ -99,6 +100,8 @@ export default function Home() {
               <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Destino (Para)</label>
               <select value={destVendor} onChange={(e) => setDestVendor(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
                 <option value="Nokia">Nokia ISAM</option>
+                <option value="Fiberhome AN5000">Fiberhome AN5000</option>
+                <option value="Fiberhome AN6000">Fiberhome AN6000</option>
                 <option value="Huawei">Huawei (Em breve)</option>
                 <option value="Datacom">Datacom (Em breve)</option>
               </select>

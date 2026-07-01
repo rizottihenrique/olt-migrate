@@ -8,13 +8,9 @@ import (
 // GetParser retorna o parser correto de acordo com a fabricante de origem
 func GetParser(vendor string) Parser {
 	switch vendor {
-	case "Fiberhome":
+	case "Fiberhome", "Fiberhome AN5000", "Fiberhome AN6000":
 		return &parser.FiberhomeParser{}
-	// Futuramente:
-	// case "ZTE":
-	// 	return &parser.ZTEParser{}
 	default:
-		// Default para Fiberhome se não especificado ou não encontrado
 		return &parser.FiberhomeParser{}
 	}
 }
@@ -24,6 +20,10 @@ func GetGenerator(vendor string) Generator {
 	switch vendor {
 	case "Nokia":
 		return &generator.NokiaGenerator{}
+	case "Fiberhome AN5000":
+		return &generator.Fiberhome5000Generator{}
+	case "Fiberhome AN6000":
+		return &generator.Fiberhome6000Generator{}
 	// Futuramente:
 	// case "Huawei":
 	// 	return &generator.HuaweiGenerator{}

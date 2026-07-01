@@ -25,6 +25,8 @@ type ONU struct {
 	Model        string
 	PPPoEUser    string
 	PPPoEPass    string
+	WiFiSSID     string
+	WiFiPass     string
 	Services     []Service
 }
 
