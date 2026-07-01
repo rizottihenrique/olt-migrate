@@ -31,3 +31,6 @@ backend/*.out
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos de clientes (Backups)
+docs/ref/
