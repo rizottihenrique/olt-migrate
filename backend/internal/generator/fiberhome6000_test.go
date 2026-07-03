@@ -46,8 +46,8 @@ func TestFiberhome6000Generator(t *testing.T) {
 	if !strings.Contains(output, "dsp pppoe pro dis maria.silva 123456 null auto upnp_switch enable entries 6 fe1 fe2 fe3 fe4 ssid1 ssid5") {
 		t.Errorf("Falhou ao gerar wancfg texto plano no gerador AN6000: %s", output)
 	}
-	if !strings.Contains(output, "ssid enable Maria_WiFi hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey senha654") {
-		t.Errorf("Falhou ao gerar wifi no gerador AN6000: %s", output)
+	if strings.Contains(output, "onu wifi") {
+		t.Errorf("Gerador AN6000 não deveria incluir comandos de Wi-Fi: %s", output)
 	}
 
 	// Verifica bridge AN6000
@@ -75,10 +75,10 @@ func TestFiberhome6000Generator_UserCase(t *testing.T) {
 	output := gen.Generate(onus)
 	t.Logf("Output gerado AN6000:\n%s", output)
 
-	if !strings.Contains(output, "onu wifi connection 29 serv-no 1 index 1 ssid enable Ellos hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey 20112024") {
-		t.Errorf("Comando wifi connection serv-no 1 gerado incorretamente. Output:\n%s", output)
+	if !strings.Contains(output, "onu wan-cfg 29 ind 1 mode tr069-int ty r 188") {
+		t.Errorf("Comando wan-cfg gerado incorretamente. Output:\n%s", output)
 	}
-	if !strings.Contains(output, "onu wifi connection 29 serv-no 5 index 1 ssid enable Ellos_5G hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey 20112024") {
-		t.Errorf("Comando wifi connection serv-no 5 gerado incorretamente. Output:\n%s", output)
+	if strings.Contains(output, "onu wifi") {
+		t.Errorf("Gerador AN6000 não deveria incluir comandos de Wi-Fi. Output:\n%s", output)
 	}
 }

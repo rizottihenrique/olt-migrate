@@ -12,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="bg-[#f9fafb] text-gray-900">
-      <body className="min-h-screen bg-[#f9fafb] text-gray-900 font-sans flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900">
+    <html lang="pt-BR" className="bg-[#f9fafb] text-gray-900" suppressHydrationWarning>
+      <body className="min-h-screen bg-[#f9fafb] text-gray-900 font-sans flex flex-col antialiased selection:bg-blue-100 selection:text-blue-900" suppressHydrationWarning>
         
         {/* Simple Navbar */}
         <header className="bg-white border-b border-gray-200">

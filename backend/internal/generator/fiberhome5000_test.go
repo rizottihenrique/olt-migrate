@@ -43,8 +43,8 @@ func TestFiberhome5000Generator(t *testing.T) {
 	if !strings.Contains(output, "dsp pppoe pro dis cliente.pppoe senha123 null auto entries 6 fe1 fe2 fe3 fe4 ssid1 ssid5") {
 		t.Errorf("Falhou ao gerar wancfg com senha texto plano no gerador AN5000: %s", output)
 	}
-	if !strings.Contains(output, "ssid enable Cliente_WiFI hide disable authmode wpa_psk/wpa2psk encrypt_type tkipaes wpakey minhasenha") {
-		t.Errorf("Falhou ao gerar wifi no gerador AN5000: %s", output)
+	if strings.Contains(output, "wifi_serv_wlan") {
+		t.Errorf("Gerador AN5000 não deveria incluir comandos de Wi-Fi: %s", output)
 	}
 
 	// Verifica bridge AN5000

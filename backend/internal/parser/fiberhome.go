@@ -127,6 +127,9 @@ type FiberhomeParser struct{}
 func (p *FiberhomeParser) Parse(reader io.Reader) ([]models.ONU, error) {
 	onuMap := make(map[string]*models.ONU)
 	scanner := bufio.NewScanner(reader)
+	const maxCapacity = 10 * 1024 * 1024 // 10 MB per line
+	buf := make([]byte, 64*1024)
+	scanner.Buffer(buf, maxCapacity)
 
 	currentSlot := 0
 	currentPort := 0

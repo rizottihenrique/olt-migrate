@@ -49,7 +49,7 @@ func (g *Fiberhome6000Generator) Generate(onus []models.ONU) string {
 	var sb strings.Builder
 
 	sb.WriteString("! ==============================================================================\n")
-	sb.WriteString("! MIGRACAO PARA FIBERHOME AN6000 (AGRUPADO POR SECOES: AUTORIZACAO, WAN, WIFI, GERENCIAMENTO)\n")
+	sb.WriteString("! MIGRACAO PARA FIBERHOME AN6000 (AGRUPADO POR SECOES: AUTORIZACAO, WAN, GERENCIAMENTO)\n")
 	sb.WriteString("! ==============================================================================\n\n")
 
 	for _, k := range ponKeys {
@@ -121,38 +121,8 @@ func (g *Fiberhome6000Generator) Generate(onus []models.ONU) string {
 			}
 		}
 
-		// --- SEÇÃO 3: WI-FI (Modo interface pon) ---
-		sb.WriteString(fmt.Sprintf("! --- 3. CONFIGURACAO DE WI-FI (PON 1/%d/%d) ---\n", slot, port))
-		hasWiFi := false
-		for _, onu := range ponONUs {
-			if onu.PPPoEUser != "" {
-				hasWiFi = true
-				login := onu.PPPoEUser
-				ssid := onu.WiFiSSID
-				if ssid == "" {
-					ssid = login
-				}
-				wifiPass := onu.WiFiPass
-				if wifiPass == "" {
-					wifiPass = "12345678"
-				}
-				sb.WriteString(fmt.Sprintf("! ONU %d (%s) - Wi-Fi\n", onu.OnuID, login))
-				sb.WriteString(fmt.Sprintf("onu wifi connection %d serv-no 1 index 1 ssid enable %s hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey %s interval 0 radius-serv ipv4 192.168.1.18 port 1812 pswd 12345678 wep-length 40bit key_index 1 wep-key 12345 12345 12345 12345 wapi-serv-addr 0.0.0.0 0 wifi-connect-num 32\n",
-					onu.OnuID, ssid, wifiPass))
-				sb.WriteString(fmt.Sprintf("onu wifi attribute %d serv-no 1 wifi enable district brazil channel 0 standard 802.11bgn txpower 20 frequency 2.4ghz freq-bandwidth 20mhz\n",
-					onu.OnuID))
-				sb.WriteString(fmt.Sprintf("onu wifi connection %d serv-no 5 index 1 ssid enable %s_5G hide disable authmode wpa-psk/wpa2psk encrypt-type tkipaes wpakey %s interval 0 radius-serv ipv4 192.168.1.18 port 1812 pswd 12345678 wep-length 40bit key_index 1 wep-key 12345 12345 12345 12345 wapi-serv-addr 0.0.0.0 0 wifi-connect-num 32\n",
-					onu.OnuID, ssid, wifiPass))
-				sb.WriteString(fmt.Sprintf("onu wifi attribute %d serv-no 5 wifi enable district brazil channel 0 standard 802.11ac txpower 20 frequency 5.8ghz freq-bandwidth 80mhz\n\n",
-					onu.OnuID))
-			}
-		}
-		if !hasWiFi {
-			sb.WriteString("! Nenhuma ONU com Wi-Fi nesta PON.\n\n")
-		}
-
-		// --- SEÇÃO 4: GERENCIAMENTO E ISOLAMENTO (Modo interface pon) ---
-		sb.WriteString(fmt.Sprintf("! --- 4. GERENCIAMENTO E ISOLAMENTO (PON 1/%d/%d) ---\n", slot, port))
+		// --- SEÇÃO 3: GERENCIAMENTO E ISOLAMENTO (Modo interface pon) ---
+		sb.WriteString(fmt.Sprintf("! --- 3. GERENCIAMENTO E ISOLAMENTO (PON 1/%d/%d) ---\n", slot, port))
 		for _, onu := range ponONUs {
 			if onu.PPPoEUser != "" {
 				sb.WriteString(fmt.Sprintf("! ONU %d (%s) - Gerenciamento\n", onu.OnuID, onu.PPPoEUser))

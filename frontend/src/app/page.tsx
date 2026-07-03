@@ -4,6 +4,9 @@ import { useState } from "react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
+  const [inputMode, setInputMode] = useState<"file" | "paste">("file");
+  const [pastedText, setPastedText] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const [sourceVendor, setSourceVendor] = useState("Fiberhome AN5000");
   const [destVendor, setDestVendor] = useState("Nokia");
   const [mappings, setMappings] = useState([{ sourceSlot: 1, sourcePon: 1, destSlot: 1, destPon: 1 }]);
@@ -54,17 +57,23 @@ export default function Home() {
   };
 
   const handleMigrate = async () => {
-    if (!file) return alert("Selecione um arquivo de configuração da Fiberhome.");
+    let targetFile = file;
+    if (inputMode === "paste") {
+      if (!pastedText.trim()) return alert("Cole o texto de configuração da Fiberhome no campo.");
+      targetFile = new File([pastedText], "backup_colado.txt", { type: "text/plain" });
+    } else if (!targetFile) {
+      return alert("Selecione um arquivo de configuração da Fiberhome.");
+    }
     
     setLoading(true);
     const formData = new FormData();
-    formData.append("configFile", file);
+    formData.append("configFile", targetFile);
     formData.append("sourceVendor", sourceVendor);
     formData.append("destVendor", destVendor);
     formData.append("mappings", JSON.stringify(mappings));
 
     try {
-      const res = await fetch("http://localhost:8080/api/migrate", {
+      const res = await fetch("/api/migrate", {
         method: "POST",
         body: formData,
       });
@@ -135,27 +144,81 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Passo 2: Arquivo */}
+        {/* Passo 2: Arquivo ou Texto */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-sm font-semibold text-gray-800">2. Arquivo de Backup</h2>
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <h2 className="text-sm font-semibold text-gray-800">2. Backup (Arquivo ou Texto Colado)</h2>
+            <div className="flex bg-gray-200/60 p-0.5 rounded-lg text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setInputMode("file")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  inputMode === "file" ? "bg-white text-blue-600 shadow-sm font-semibold" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                📂 Arquivo
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode("paste")}
+                className={`px-2.5 py-1 rounded-md transition-all ${
+                  inputMode === "paste" ? "bg-white text-blue-600 shadow-sm font-semibold" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                📋 Colar Texto
+              </button>
+            </div>
           </div>
           <div className="p-5">
-            <label className="block w-full border-2 border-dashed border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-colors rounded-lg p-6 text-center cursor-pointer">
-              <input type="file" onChange={handleFileChange} className="hidden" accept=".txt,.dat,.cfg" />
-              {file ? (
-                <div>
-                  <svg className="w-8 h-8 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+            {inputMode === "file" ? (
+              <label 
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    setFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                className={`block w-full border-2 border-dashed transition-colors rounded-lg p-6 text-center cursor-pointer ${
+                  isDragging ? "border-blue-500 bg-blue-50/80" : "border-gray-200 hover:border-blue-400 hover:bg-blue-50/50"
+                }`}
+              >
+                <input type="file" onChange={handleFileChange} className="hidden" />
+                {file ? (
+                  <div>
+                    <svg className="w-8 h-8 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <p className="text-sm font-medium text-gray-800">{file.name}</p>
+                    <p className="text-xs text-gray-500 mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+                    <span className="inline-block mt-2 text-[11px] text-blue-600 font-medium underline">Clique ou arraste para trocar o arquivo</span>
+                  </div>
+                ) : (
+                  <div>
+                    <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <p className="text-sm font-medium text-gray-700">Clique para escolher ou arraste o arquivo aqui</p>
+                    <p className="text-xs text-gray-400 mt-1">Aceita arquivos .txt, .cfg, .dat, .log ou sem extensão</p>
+                  </div>
+                )}
+              </label>
+            ) : (
+              <div>
+                <textarea
+                  value={pastedText}
+                  onChange={(e) => setPastedText(e.target.value)}
+                  placeholder="Cole aqui o texto do seu backup ou comandos da OLT (ex: ! ONU 2... ou whitelist add...)"
+                  className="w-full h-36 p-3 text-xs font-mono bg-gray-50 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-y transition-shadow"
+                />
+                <div className="flex justify-between items-center mt-1.5 text-xs text-gray-500">
+                  <span>{pastedText ? `${pastedText.split("\n").length} linhas` : "Nenhum texto colado"}</span>
+                  {pastedText && (
+                    <button type="button" onClick={() => setPastedText("")} className="text-red-500 hover:underline">
+                      Limpar texto
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div>
-                  <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  <p className="text-sm font-medium text-gray-600">Selecione o backup Fiberhome</p>
-                </div>
-              )}
-            </label>
+              </div>
+            )}
           </div>
         </div>
 
@@ -214,9 +277,9 @@ export default function Home() {
 
             <button 
               onClick={handleMigrate} 
-              disabled={loading || !file}
+              disabled={loading || (inputMode === "file" ? !file : !pastedText.trim())}
               className={`w-full py-2.5 rounded-lg text-sm font-medium text-white shadow-sm transition-all mt-4 flex items-center justify-center
-                ${loading || !file ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow'}`}
+                ${loading || (inputMode === "file" ? !file : !pastedText.trim()) ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:shadow'}`}
             >
               {loading ? (
                 <>

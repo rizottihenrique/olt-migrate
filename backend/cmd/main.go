@@ -11,10 +11,13 @@ import (
 )
 
 func migrateHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[REQ] %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+
 	// CORS handling para chamadas do Frontend Next.js (dev mode)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Expose-Headers", "*")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -105,6 +108,6 @@ func main() {
 	http.HandleFunc("/api/migrate", migrateHandler)
 	
 	port := "8080"
-	fmt.Printf("OLT Migrate Backend rodando na porta %s...\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	fmt.Printf("OLT Migrate Backend rodando na porta %s (0.0.0.0:8080)...\n", port)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, nil))
 }
