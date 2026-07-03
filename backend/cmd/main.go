@@ -29,8 +29,8 @@ func migrateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Faz o parse do multipart form (upload do arquivo)
-	err := r.ParseMultipartForm(50 << 20) // 50 MB
+	// Faz o parse do multipart form (upload de arquivos de até 100MB+)
+	err := r.ParseMultipartForm(150 << 20) // 150 MB
 	if err != nil {
 		http.Error(w, "Falha ao ler formulário multipart", http.StatusBadRequest)
 		return

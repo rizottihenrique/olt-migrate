@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const maxDuration = 120; // 2 minutos para processar arquivos de até 100MB+
+
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
